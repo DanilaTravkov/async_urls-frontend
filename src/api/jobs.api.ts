@@ -1,5 +1,3 @@
-// Почему классы а не интерфейсы? Та же логика, что и на бекенде - интерфейсы исчезают при транспиляции, а классы остаются и к ним можно обратиться в рантайме.
-
 export enum JobStatus {
   Pending = 'pending',
   InProgress = 'in_progress',
@@ -14,136 +12,109 @@ export enum UrlStatus {
   Error = 'error',
   Cancelled = 'cancelled',
 }
-export class CreateJobRequest { constructor(public urls: string[]) {} }
-export class CreateJobResponse { constructor(public jobId: string) {} }
+export class CreateJobRequest {
+  constructor(public urls: string[]) {}
+}
+export class CreateJobResponse {
+  jobId!: string
+}
 export class JobStats {
-  constructor(public success: number, public error: number) {}
+  success!: number
+  error!: number
 }
 export class JobSummary {
-  constructor(
-    public id: string,
-    public createdAt: string,
-    public status: JobStatus,
-    public urlCount: number,
-    public stats: JobStats,
-  ) {}
-  static from(value: JobSummary): JobSummary {
-    return new JobSummary(
-      value.id,
-      value.createdAt,
-      value.status,
-      value.urlCount,
-      new JobStats(value.stats.success, value.stats.error),
-    )
-  }
+  id!: string
+  createdAt!: string
+  status!: JobStatus
+  urlCount!: number
+  stats!: JobStats
 }
 export class JobsPage {
-  constructor(
-    public items: JobSummary[],
-    public nextCursor: string | null,
-  ) {}
-  static from(value: JobsPage): JobsPage {
-    return new JobsPage(
-      value.items.map((item) => JobSummary.from(item)),
-      value.nextCursor,
-    )
-  }
+  items!: JobSummary[]
+  nextCursor!: string | null
 }
 export class UrlResult {
-  constructor(
-    public url: string,
-    public status: UrlStatus,
-    public httpStatus: number | null,
-    public error: string | null,
-    public startedAt: string | null,
-    public finishedAt: string | null,
-    public durationMs: number | null,
-  ) {}
-  static from(value: UrlResult): UrlResult {
-    return new UrlResult(
-      value.url,
-      value.status,
-      value.httpStatus,
-      value.error,
-      value.startedAt,
-      value.finishedAt,
-      value.durationMs,
-    )
-  }
+  url!: string
+  status!: UrlStatus
+  httpStatus!: number | null
+  error!: string | null
+  startedAt!: string | null
+  finishedAt!: string | null
+  durationMs!: number | null
 }
 export class JobDetails {
-  constructor(
-    public id: string,
-    public status: JobStatus,
-    public items: UrlResult[],
-  ) {}
-  static from(value: JobDetails): JobDetails {
-    return new JobDetails(
-      value.id,
-      value.status,
-      value.items.map((item) => UrlResult.from(item)),
-    )
-  }
+  id!: string
+  status!: JobStatus
+  items!: UrlResult[]
 }
-
-// Не использую здесь axios или Tanstack Query потому что API всего одно - для задач (jobs), для такого задания хватает и обычного fetch
-
 export class ApiError extends Error {
   constructor(public statusCode: number, message: string) {
     super(message)
     this.name = 'ApiError'
   }
 }
+
+const instance = <T extends object>(Type: new () => T, value: T) =>
+  Object.assign(new Type(), value)
+
 export class JobsApi {
   constructor(
     private readonly baseUrl =
       (import.meta.env as Record<string, string | undefined>).VITE_API_URL ??
       '/api',
   ) {}
-  create(urls: string[]): Promise<CreateJobResponse> {
-    return this.json(
-      '/jobs',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(new CreateJobRequest(urls)),
-      },
-      (value) => new CreateJobResponse(value.jobId),
-    )
+  create(urls: string[]) {
+    return this.request('/jobs', CreateJobResponse, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(new CreateJobRequest(urls)),
+    })
   }
-  list(limit = 20, cursor?: string): Promise<JobsPage> {
-    const query = new URLSearchParams({ limit: limit.toString() })
+
+  async list(limit = 20, cursor?: string) {
+    const query = new URLSearchParams({ limit: String(limit) })
     if (cursor) query.set('cursor', cursor)
-    return this.json(`/jobs?${query.toString()}`, {}, (value) =>
-      JobsPage.from(value),
-    )
+    const page = await this.request(`/jobs?${query}`, JobsPage)
+    page.items = page.items.map((job) => {
+      const summary = instance(JobSummary, job)
+      summary.stats = instance(JobStats, job.stats)
+      return summary
+    })
+    return page
   }
-  details(id: string): Promise<JobDetails> {
-    return this.json(`/jobs/${id}`, {}, (value) => JobDetails.from(value))
+
+  async details(id: string) {
+    const details = await this.request(`/jobs/${id}`, JobDetails)
+    details.items = details.items.map((item) => instance(UrlResult, item))
+    return details
   }
-  async cancel(id: string): Promise<void> {
+
+  async cancel(id: string) {
     const response = await fetch(`${this.baseUrl}/jobs/${id}`, {
       method: 'DELETE',
     })
-    if (!response.ok) throw await this.error(response)
+    if (!response.ok) throw await this.toError(response)
   }
-  private async json<T>(
+
+  private async request<T extends object>(
     path: string,
-    init: RequestInit,
-    transform: (value: T) => T,
-  ): Promise<T> {
+    Type: new () => T,
+    init?: RequestInit,
+  ) {
     const response = await fetch(`${this.baseUrl}${path}`, init)
-    if (!response.ok) throw await this.error(response)
-    return transform((await response.json()) as T)
+    if (!response.ok) throw await this.toError(response)
+    return instance(Type, (await response.json()) as T)
   }
-  private async error(response: Response): Promise<ApiError> {
+
+  private async toError(response: Response) {
     const body = (await response.json().catch(() => null)) as {
       message?: string | string[]
     } | null
     const message = Array.isArray(body?.message)
       ? body.message.join(', ')
-      : body?.message ?? `HTTP ${response.status.toString()}`
+      : body?.message ?? `HTTP ${String(response.status)}`
     return new ApiError(response.status, message)
   }
 }
+
 export const jobsApi = new JobsApi()
