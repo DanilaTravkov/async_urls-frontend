@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { isJobTerminal } from '@/shared/lib/jobs'
+import { useNavigate } from 'react-router-dom'
 
 const statusLabels: Record<JobStatus, string> = {
   [JobStatus.Pending]: 'Ожидает',
@@ -19,6 +21,8 @@ const statusLabels: Record<JobStatus, string> = {
   [JobStatus.Cancelled]: 'Отменено',
   [JobStatus.Failed]: 'Ошибка',
 }
+
+const LIST_POLLING_INTERVAL = 3000
 
 const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'medium',
@@ -34,17 +38,56 @@ export function JobsList() {
   const loadMore = useJobsStore((state) => state.loadMore)
   const selectJob = useJobsStore((state) => state.selectJob)
 
+  const navigate = useNavigate()
+
+  const hasRunningJobs = jobs.some(
+    (job) => !isJobTerminal(job.status)
+  )
+
   useEffect(() => {
     void fetchJobs()
   }, [fetchJobs])
+
+  useEffect(() => {
+    if (!hasRunningJobs) return
+
+    let cancelled = false
+    let timeoutId: number | undefined
+
+    async function refresh() {
+      await fetchJobs()
+
+      if (cancelled) return
+
+      timeoutId = window.setTimeout(() => {
+        void refresh()
+      }, LIST_POLLING_INTERVAL)
+    }
+
+    timeoutId = window.setTimeout(() => {
+      void refresh()
+    }, LIST_POLLING_INTERVAL)
+
+    return () => {
+      cancelled = true
+
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [fetchJobs, hasRunningJobs])
 
   return (
     <Card className="mt-10">
       <CardHeader>
         <CardTitle>Последние задания</CardTitle>
-        <CardDescription>
-          Выберите задание для просмотра подробной информации
-        </CardDescription>
+        {
+          !request.loading && !request.error && jobs.length !== 0 && (
+            <CardDescription>
+              Выберите задание для просмотра подробной информации
+            </CardDescription>
+          )
+        }
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -87,6 +130,7 @@ export function JobsList() {
             }`}
             onClick={() => {
               selectJob(job.id)
+              void navigate(`/jobs/${job.id}`)
             }}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
