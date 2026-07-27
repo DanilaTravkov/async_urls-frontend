@@ -1,13 +1,9 @@
-import { Activity, ListChecks, Plus } from 'lucide-react'
+import { Activity, ListChecks } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 import { FeatureCard } from '@/components/feature-card'
+import { JobCreateForm } from '@/components/job-create-form'
 
 const sections = [
-  {
-    title: 'Новое задание',
-    description: 'Форма добавления URL',
-    icon: Plus,
-  },
   {
     title: 'Последние задания',
     description: 'Список последних проверок',
@@ -15,7 +11,7 @@ const sections = [
   },
   {
     title: 'Текущий прогресс',
-    description: 'Детали активного задания будут обновляться автоматически',
+    description: 'Детали активного задания',
     icon: Activity,
   },
 ]
@@ -34,9 +30,11 @@ export function JobsPage() {
           </p>
         </section>
 
+        <JobCreateForm />
+
         <section
           aria-label="Разделы приложения"
-          className="mt-10 grid gap-4 md:grid-cols-3"
+          className="mt-10 grid gap-4 md:grid-cols-2"
         >
           {sections.map((section) => (
             <FeatureCard key={section.title} {...section} />

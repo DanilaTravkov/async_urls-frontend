@@ -1,14 +1,12 @@
 import { create } from 'zustand'
-import {
-  jobsApi,
-  type JobDetails,
-  type JobSummary,
-} from '@/api/jobs.api'
-export class RequestState {
-  constructor(public loading = false, public error: string | null = null) {}
-}
+import { jobsApi, type JobDetails, type JobSummary } from '@/api/jobs.api'
 
-// Zustand достаточно легкий и простой стейт менедежер с flux архитектурой. Если проект будет более крупный, то уже нужно перейти на Redux Toolkit
+export class RequestState {
+  constructor(
+    public loading = false,
+    public error: string | null = null,
+  ) {}
+}
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type JobsState = {
@@ -27,87 +25,87 @@ type JobsState = {
   fetchDetails: () => Promise<void>
   cancelJob: () => Promise<boolean>
 }
+
+const idle = () => new RequestState()
 const pending = () => new RequestState(true)
 const failed = (error: unknown) =>
-  new RequestState(false, error instanceof Error ? error.message : 'Unknown error')
+  new RequestState(
+    false,
+    error instanceof Error ? error.message : 'Неизвестная ошибка',
+  )
+
 export const useJobsStore = create<JobsState>((set, get) => ({
   jobs: [],
   nextCursor: null,
   activeJobId: null,
   details: null,
-  listRequest: new RequestState(), createRequest: new RequestState(),
-  detailsRequest: new RequestState(), cancelRequest: new RequestState(),
+  listRequest: idle(),
+  createRequest: idle(),
+  detailsRequest: idle(),
+  cancelRequest: idle(),
+
   fetchJobs: async () => {
     set({ listRequest: pending() })
     try {
       const page = await jobsApi.list()
-      set({
-        jobs: page.items,
-        nextCursor: page.nextCursor,
-        listRequest: new RequestState(),
-      })
+      set({ jobs: page.items, nextCursor: page.nextCursor, listRequest: idle() })
     } catch (error) {
       set({ listRequest: failed(error) })
     }
   },
+
   loadMore: async () => {
     const { jobs, nextCursor, listRequest } = get()
     if (!nextCursor || listRequest.loading) return
     set({ listRequest: pending() })
     try {
       const page = await jobsApi.list(20, nextCursor)
-      const ids = new Set(jobs.map((job) => job.id))
+      const known = new Set(jobs.map(({ id }) => id))
       set({
-        jobs: [...jobs, ...page.items.filter((job) => !ids.has(job.id))],
+        jobs: [...jobs, ...page.items.filter(({ id }) => !known.has(id))],
         nextCursor: page.nextCursor,
-        listRequest: new RequestState(),
+        listRequest: idle(),
       })
     } catch (error) {
       set({ listRequest: failed(error) })
     }
   },
+
   createJob: async (urls) => {
     set({ createRequest: pending() })
     try {
       const { jobId } = await jobsApi.create(urls)
-      set({
-        activeJobId: jobId,
-        details: null,
-        createRequest: new RequestState(),
-      })
+      set({ activeJobId: jobId, details: null, createRequest: idle() })
       return jobId
     } catch (error) {
       set({ createRequest: failed(error) })
       return null
     }
   },
-  selectJob: (id) => {
-    set({
-      activeJobId: id,
-      details: null,
-      detailsRequest: new RequestState(),
-    })
+
+  selectJob: (activeJobId) => {
+    set({ activeJobId, details: null, detailsRequest: idle() })
   },
+
   fetchDetails: async () => {
     const id = get().activeJobId
     if (!id) return
     set({ detailsRequest: pending() })
     try {
       const details = await jobsApi.details(id)
-      if (get().activeJobId === id) {
-        set({ details, detailsRequest: new RequestState() })
-      }
+      if (get().activeJobId === id) set({ details, detailsRequest: idle() })
     } catch (error) {
-      set({ detailsRequest: failed(error) })
+      if (get().activeJobId === id) set({ detailsRequest: failed(error) })
     }
   },
+
   cancelJob: async () => {
     const id = get().activeJobId
     if (!id) return false
     set({ cancelRequest: pending() })
     try {
       await jobsApi.cancel(id)
-      set({ cancelRequest: new RequestState() })
+      set({ cancelRequest: idle() })
       return true
     } catch (error) {
       set({ cancelRequest: failed(error) })
