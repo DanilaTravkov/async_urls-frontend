@@ -3,11 +3,13 @@ import {
   jobsApi,
   type JobDetails,
   type JobSummary,
-} from './jobs.api'
+} from '@/api/jobs.api'
 export class RequestState {
   constructor(public loading = false, public error: string | null = null) {}
 }
-// Internal Zustand shape; runtime API objects remain classes.
+
+// Zustand достаточно легкий и простой стейт менедежер с flux архитектурой. Если проект будет более крупный, то уже нужно перейти на Redux Toolkit
+
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type JobsState = {
   jobs: JobSummary[]
