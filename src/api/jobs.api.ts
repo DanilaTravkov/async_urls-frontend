@@ -1,3 +1,5 @@
+// Почему классы а не интерфейсы? Та же логика, что и на бекенде - интерфейсы исчезают при транспиляции, а классы остаются и к ним можно обратиться в рантайме.
+
 export enum JobStatus {
   Pending = 'pending',
   InProgress = 'in_progress',
@@ -83,6 +85,9 @@ export class JobDetails {
     )
   }
 }
+
+// Не использую здесь axios или Tanstack Query потому что API всего одно - для задач (jobs), для такого задания хватает и обычного fetch
+
 export class ApiError extends Error {
   constructor(public statusCode: number, message: string) {
     super(message)
