@@ -1,14 +1,10 @@
-import { Activity, ListChecks } from 'lucide-react'
+import { Activity } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 import { FeatureCard } from '@/components/feature-card'
 import { JobCreateForm } from '@/components/job-create-form'
+import { JobsList } from '@/components/job-list'
 
 const sections = [
-  {
-    title: 'Последние задания',
-    description: 'Список последних проверок',
-    icon: ListChecks,
-  },
   {
     title: 'Текущий прогресс',
     description: 'Детали активного задания',
@@ -31,6 +27,7 @@ export function JobsPage() {
         </section>
 
         <JobCreateForm />
+        <JobsList />
 
         <section
           aria-label="Разделы приложения"

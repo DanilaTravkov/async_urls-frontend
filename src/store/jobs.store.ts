@@ -76,6 +76,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     try {
       const { jobId } = await jobsApi.create(urls)
       set({ activeJobId: jobId, details: null, createRequest: idle() })
+      get().fetchJobs()
       return jobId
     } catch (error) {
       set({ createRequest: failed(error) })
