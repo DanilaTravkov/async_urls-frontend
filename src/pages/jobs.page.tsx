@@ -1,16 +1,6 @@
-import { Activity } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
-import { FeatureCard } from '@/components/feature-card'
 import { JobCreateForm } from '@/components/job-create-form'
 import { JobsList } from '@/components/job-list'
-
-const sections = [
-  {
-    title: 'Текущий прогресс',
-    description: 'Детали активного задания',
-    icon: Activity,
-  },
-]
 
 export function JobsPage() {
   return (
@@ -28,15 +18,6 @@ export function JobsPage() {
 
         <JobCreateForm />
         <JobsList />
-
-        <section
-          aria-label="Разделы приложения"
-          className="mt-10 grid gap-4 md:grid-cols-2"
-        >
-          {sections.map((section) => (
-            <FeatureCard key={section.title} {...section} />
-          ))}
-        </section>
       </main>
     </div>
   )
