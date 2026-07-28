@@ -85,7 +85,12 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
 
   selectJob: (activeJobId) => {
-    set({ activeJobId, details: null, detailsRequest: idle() })
+    set({ 
+      activeJobId, 
+      details: null, 
+      detailsRequest: idle(),
+      cancelRequest: idle()
+    })
   },
 
   fetchDetails: async () => {
@@ -102,14 +107,27 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
   cancelJob: async () => {
     const id = get().activeJobId
+
     if (!id) return false
+
     set({ cancelRequest: pending() })
+
     try {
       await jobsApi.cancel(id)
+
+      if (get().activeJobId !== id) {
+        return true
+      }
+
       set({ cancelRequest: idle() })
+      await get().fetchDetails()
+
       return true
     } catch (error) {
-      set({ cancelRequest: failed(error) })
+      if (get().activeJobId === id) {
+        set({ cancelRequest: failed(error) })
+      }
+
       return false
     }
   },

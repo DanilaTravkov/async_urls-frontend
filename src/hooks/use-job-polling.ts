@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useJobsStore } from '@/store/jobs.store'
-import { isJobTerminal } from '@/shared/lib/jobs'
+import { shouldPollStop } from '@/shared/lib/jobs'
 
 const POLLING_INTERVAL_MS = 2000
 
@@ -24,7 +24,7 @@ export function useJobPolling(id: string | null) {
 
       if (state.activeJobId !== id) return
 
-      if (details?.id === id && isJobTerminal(details.status)) {
+      if (details?.id === id && shouldPollStop(details)) {
         return
       }
 

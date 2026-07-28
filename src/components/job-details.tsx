@@ -9,6 +9,8 @@ import {
 } from '@/shared/components/ui/card'
 import { Progress } from '@/shared/components/ui/progress'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Button } from '@/shared/components/ui/button'
+import { isJobTerminal } from '@/shared/lib/jobs'
 
 const jobLabels: Record<JobStatus, string> = {
   [JobStatus.Pending]: 'Ожидает',
@@ -40,6 +42,8 @@ const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
 export function JobDetails() {
   const details = useJobsStore((state) => state.details)
   const request = useJobsStore((state) => state.detailsRequest)
+  const cancelRequest = useJobsStore((state) => state.cancelRequest)
+  const cancelJob = useJobsStore((state) => state.cancelJob)
 
   if (request.loading && !details) {
     return <Skeleton className="mt-8 h-64 w-full" />
@@ -70,7 +74,22 @@ export function JobDetails() {
             {details.id}
           </CardTitle>
 
-          <Badge>{jobLabels[details.status]}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge>{jobLabels[details.status]}</Badge>
+
+            {!isJobTerminal(details.status) && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={cancelRequest.loading}
+                onClick={() => {
+                  void cancelJob()
+                }}
+              >
+                {cancelRequest.loading ? 'Отмена...' : 'Отменить задание'}
+              </Button>
+            )}
+          </div>
         </div>
 
         <p className="text-sm text-muted-foreground">
@@ -81,12 +100,16 @@ export function JobDetails() {
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {cancelRequest.error && (
+          <p role="alert" className="text-sm text-destructive">
+            {cancelRequest.error}
+          </p>
+        )}
         {request.error && (
           <p role="alert" className="text-sm text-destructive">
             {request.error}
           </p>
         )}
-
         {details.items.map((item, index) => (
           <article
             key={`${item.url}-${String(index)}`}
