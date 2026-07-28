@@ -121,42 +121,61 @@ export function JobsList() {
           </p>
         )}
 
-        {jobs.map((job) => (
-          <button
-            key={job.id}
-            type="button"
-            className={`w-full rounded-xl border p-4 text-left transition-colors hover:bg-muted/50 ${
-              activeJobId === job.id ? 'border-primary bg-muted/50' : ''
-            }`}
-            onClick={() => {
-              selectJob(job.id)
-              void navigate(`/jobs/${job.id}`)
-            }}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <Badge
-                variant={
-                  job.status === JobStatus.Failed
-                    ? 'destructive'
-                    : job.status === JobStatus.Completed
-                      ? 'outline'
-                      : 'secondary'
-                }
-              >
-                {statusLabels[job.status]}
-              </Badge>
-            </div>
+        <div className="max-h-[30rem] space-y-2 overflow-y-auto pr-1">
+          {jobs.map((job) => (
+            <button
+              key={job.id}
+              type="button"
+              className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 ${
+                activeJobId === job.id ? 'border-primary bg-muted/50' : ''
+              }`}
+              onClick={() => {
+                selectJob(job.id)
+                void navigate(`/jobs/${job.id}`)
+              }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className="truncate font-medium"
+                  title={job.id}
+                >
+                  Задание #{job.id.slice(0, 8)}
+                </span>
 
-            <p className="mt-2 text-sm text-muted-foreground">
-              {dateFormatter.format(new Date(job.createdAt))}
-            </p>
+                <Badge
+                  className="shrink-0"
+                  variant={
+                    job.status === JobStatus.Failed
+                      ? 'destructive'
+                      : job.status === JobStatus.Completed
+                        ? 'outline'
+                        : 'secondary'
+                  }
+                >
+                  {statusLabels[job.status]}
+                </Badge>
+              </div>
 
-            <p className="mt-3 text-sm">
-              URL: {job.urlCount} · Успешно: {job.stats.success} · С ошибкой:{' '}
-              {job.stats.error}
-            </p>
-          </button>
-        ))}
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                <span className="text-muted-foreground">
+                  {dateFormatter.format(new Date(job.createdAt))}
+                </span>
+
+                <span>URL: {job.urlCount}</span>
+
+                <span className="text-emerald-600">
+                  Успешно: {job.stats.success}
+                </span>
+
+                {job.stats.error > 0 && (
+                  <span className="text-destructive">
+                    С ошибкой: {job.stats.error}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
 
         {nextCursor && (
           <Button
