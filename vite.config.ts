@@ -3,6 +3,9 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
+const apiProxyTarget =
+  process.env.API_PROXY_TARGET ?? 'http://localhost:3000'
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -11,10 +14,10 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: { '/api': 'http://localhost:3000' },
+    proxy: { '/api': apiProxyTarget },
   },
   preview: {
-    proxy: { '/api': 'http://localhost:3000' },
+    proxy: { '/api': apiProxyTarget },
   },
   test: {
     environment: 'jsdom',

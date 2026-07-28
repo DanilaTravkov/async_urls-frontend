@@ -59,9 +59,7 @@ const instance = <T extends object>(Type: new () => T, value: T) =>
 
 export class JobsApi {
   constructor(
-    private readonly baseUrl =
-      (import.meta.env as Record<string, string | undefined>).VITE_API_URL ??
-      '/api',
+    private readonly baseUrl = '/api',
   ) {}
   create(urls: string[]) {
     return this.request('/jobs', CreateJobResponse, {
